@@ -25,7 +25,7 @@ services:
       - "127.0.0.1:9009:8080"
 
   prometheus:
-    image: prom/prometheus:v3.15.1
+    image: prom/prometheus:v3.16.0
     container_name: kardigan-prometheus
     command:
       - --config.file=/etc/prometheus/prometheus.yaml
