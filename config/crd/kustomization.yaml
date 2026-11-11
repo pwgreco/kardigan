@@ -1,0 +1,6 @@
+# Not intended to be run by itself: it's built through config/default, which sets
+# the namespace and name prefix.
+resources:
+- bases/kardigan.paulgreco.ca_cardinalitybudgets.yaml
+- bases/kardigan.paulgreco.ca_cardinalityreports.yaml
+# +kubebuilder:scaffold:crdkustomizeresource

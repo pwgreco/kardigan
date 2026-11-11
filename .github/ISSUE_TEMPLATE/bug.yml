@@ -1,0 +1,26 @@
+name: Bug
+description: Something does not work as described
+labels: ["type:bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What I expected
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: CardinalityBudget YAML, commands, and operator logs help most.
+      render: shell
+  - type: input
+    id: version
+    attributes:
+      label: Kardigan version or commit

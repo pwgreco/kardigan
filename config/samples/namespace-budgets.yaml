@@ -1,0 +1,16 @@
+# Budgets by namespace. Needs the namespaces from hack/kind/workloads.yaml,
+# so this file isn't in kustomization.yaml.
+apiVersion: kardigan.paulgreco.ca/v1alpha1
+kind: CardinalityBudget
+metadata: { name: team-a, namespace: team-a }
+spec: { target: { label: namespace, value: team-a }, maxSeries: 1000 }
+---
+apiVersion: kardigan.paulgreco.ca/v1alpha1
+kind: CardinalityBudget
+metadata: { name: team-b, namespace: team-b }
+spec: { target: { label: namespace, value: team-b }, maxSeries: 2200 }
+---
+apiVersion: kardigan.paulgreco.ca/v1alpha1
+kind: CardinalityBudget
+metadata: { name: team-c, namespace: team-c }
+spec: { target: { label: namespace, value: team-c }, maxSeries: 10000 }

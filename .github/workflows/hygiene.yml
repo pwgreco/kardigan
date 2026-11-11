@@ -1,0 +1,51 @@
+# Checks that complement the Lint, Tests and E2E workflows.
+name: Hygiene
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # New vulnerabilities appear without any change here, so check weekly too.
+  schedule:
+    - cron: "17 6 * * 1"
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generated-code:
+    name: Generated code and go.mod are up to date
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Check go.mod and go.sum
+        run: make verify-tidy
+      - name: Regenerate CRDs, RBAC and deepcopy, then diff
+        run: make verify-generated
+
+  vulnerabilities:
+    name: govulncheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Scan dependencies
+        run: make vulncheck

@@ -1,0 +1,108 @@
+# A Prometheus agent in kind that scrapes annotated pods and
+# remote-writes to the Mimir container from hack/local-stack.
+#
+# Before applying, attach Mimir to kind's Docker network so pods can reach it
+# by container name (works on Linux and macOS):
+#
+#   docker network connect kind kardigan-mimir
+#   kubectl apply -f hack/kind/prometheus-agent.yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus-agent
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus-agent
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus-agent
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus-agent
+subjects:
+  - kind: ServiceAccount
+    name: prometheus-agent
+    namespace: monitoring
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-agent
+  namespace: monitoring
+data:
+  prometheus.yaml: |
+    global:
+      scrape_interval: 15s
+      external_labels:
+        cluster: kind
+    scrape_configs:
+      - job_name: pods
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: "true"
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+    remote_write:
+      - url: http://kardigan-mimir:8080/api/v1/push
+        headers:
+          X-Scope-OrgID: demo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-agent
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: prometheus-agent }
+  template:
+    metadata:
+      labels: { app: prometheus-agent }
+    spec:
+      serviceAccountName: prometheus-agent
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v3.15.1
+          args:
+            - --agent
+            - --config.file=/etc/prometheus/prometheus.yaml
+            - --storage.agent.path=/prometheus
+            - --log.level=warn
+          volumeMounts:
+            - { name: config, mountPath: /etc/prometheus }
+            - { name: data, mountPath: /prometheus }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 512Mi }
+      volumes:
+        - name: config
+          configMap: { name: prometheus-agent }
+        - name: data
+          emptyDir: {}

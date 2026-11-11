@@ -1,0 +1,129 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      created: ${{ steps.release.outputs.release_created }}
+      tag: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - id: release
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  # Nothing is published unless the same checks pass on the released commit. The
+  # other workflows run in parallel, so they can't stop a release on their own.
+  verify:
+    needs: release-please
+    if: needs.release-please.outputs.created == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.3.1
+      - name: Run the checks
+        run: make verify HELM="$(command -v helm)"
+
+  # Runs in the same workflow on purpose: a release created with the default
+  # GITHUB_TOKEN does not trigger other workflows, so a separate
+  # "on: release" workflow would never fire.
+  artefacts:
+    needs: [release-please, verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write # attach install.yaml and the chart to the release
+      packages: write # push the image and chart to ghcr.io
+    env:
+      TAG: ${{ needs.release-please.outputs.tag }}
+    outputs:
+      image: ${{ steps.names.outputs.image }}
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.3.1
+      - name: Names (GHCR needs lowercase)
+        id: names
+        run: |
+          echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+          echo "IMG=ghcr.io/${GITHUB_REPOSITORY,,}:${TAG}" >> "$GITHUB_ENV"
+          echo "CHART_REGISTRY=oci://ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/charts" >> "$GITHUB_ENV"
+          echo "CHART_VERSION=${TAG#v}" >> "$GITHUB_ENV"
+      # These download build tools, so they run before the registry login.
+      - name: Build install.yaml
+        run: make build-installer IMG="$IMG"
+      - name: Package the chart
+        run: helm package charts/kardigan --version "$CHART_VERSION" --app-version "$TAG" --destination dist
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ env.IMG }}
+          sbom: true
+          provenance: mode=max
+      - name: Push the chart
+        run: helm push "dist/kardigan-${CHART_VERSION}.tgz" "$CHART_REGISTRY"
+      - name: Attach to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" dist/install.yaml "dist/kardigan-${CHART_VERSION}.tgz"
+
+  # Keyless signing writes the repo's name and workflow to a public transparency log,
+  # so this only runs once the repo is public. It's a separate job so that nothing
+  # else gets the OIDC token.
+  sign:
+    needs: artefacts
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      id-token: write # prove to Sigstore which workflow is signing
+      packages: write # push the signature next to the image
+    env:
+      IMAGE: ${{ needs.artefacts.outputs.image }}
+      DIGEST: ${{ needs.artefacts.outputs.digest }}
+    steps:
+      - uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Sign the image
+        run: cosign sign --yes "${IMAGE}@${DIGEST}"

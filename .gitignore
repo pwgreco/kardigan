@@ -1,0 +1,37 @@
+# kubebuilder keeps this file when it scaffolds, so its defaults are included here.
+
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/*
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+
+# Editor and IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# Kubeconfig might contain secrets
+*.kubeconfig
+
+# Kardigan additions
+.DS_Store
+dist/
+*.env
+.env.*
+mimirtool-out/
+metrics-in-*.json
+prometheus-metrics.json
