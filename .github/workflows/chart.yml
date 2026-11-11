@@ -13,6 +13,7 @@ concurrency:
 
 jobs:
   lint:
+    name: Chart
     permissions:
       contents: read
     runs-on: ubuntu-latest

@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   lint:
-    name: Run on Ubuntu
+    name: Lint
     permissions:
       contents: read
     runs-on: ubuntu-latest

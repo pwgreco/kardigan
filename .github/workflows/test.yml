@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   test:
-    name: Run on Ubuntu
+    name: Tests
     permissions:
       contents: read
     runs-on: ubuntu-latest
