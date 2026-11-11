@@ -1,0 +1,19 @@
+# The operator in kind, pointed at the Mimir container from
+# hack/local-stack. Use it with: make deploy IMG=kardigan:dev KUSTOMIZE_OVERLAY=config/kind
+resources:
+- ../default
+
+patches:
+- target:
+    kind: Deployment
+    name: controller-manager
+  patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/args/-
+      value: --mimir-url=http://kardigan-mimir:8080
+    - op: add
+      path: /spec/template/spec/containers/0/args/-
+      value: --mimir-tenant=demo
+    - op: add
+      path: /spec/template/spec/containers/0/args/-
+      value: --grafana-url=http://kardigan-grafana:3000

@@ -1,0 +1,22 @@
+# Adds namespace to all resources.
+namespace: kardigan-system
+
+# Prepended to the names of all resources. It should match the prefix (the text
+# before '-') of the namespace above.
+namePrefix: kardigan-
+
+resources:
+- ../crd
+- ../rbac
+- ../manager
+- metrics_service.yaml
+# Optional: a ServiceMonitor for clusters with the Prometheus Operator.
+#- ../prometheus
+# Optional: only allow metrics traffic from namespaces labelled 'metrics: enabled'.
+#- ../network-policy
+
+patches:
+# Serves the metrics endpoint over HTTPS on :8443.
+- path: manager_metrics_patch.yaml
+  target:
+    kind: Deployment

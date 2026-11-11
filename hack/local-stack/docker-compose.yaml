@@ -1,0 +1,124 @@
+# Kardigan local development stack.
+#
+#   docker compose up -d        start everything
+#   docker compose down -v      stop and delete all data
+#
+# Grafana:    http://localhost:9000  (anonymous admin)
+# Mimir:      http://localhost:9009  (tenant: demo)
+# Prometheus: http://localhost:9090
+#
+# Three Avalanche instances play three "teams" with different series counts.
+# Image tags are pinned so the stack behaves the same every time; Dependabot
+# proposes bumps (see .github/dependabot.yml).
+
+name: kardigan
+
+services:
+  mimir:
+    image: grafana/mimir:3.2.4
+    container_name: kardigan-mimir
+    command: ["-config.file=/etc/mimir/mimir.yaml"]
+    volumes:
+      - ./mimir.yaml:/etc/mimir/mimir.yaml:ro
+      - mimir-data:/data
+    ports:
+      - "127.0.0.1:9009:8080"
+
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    container_name: kardigan-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yaml
+      - --storage.tsdb.path=/prometheus
+      - --log.level=warn
+    volumes:
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+    ports:
+      - "127.0.0.1:9090:9090"
+    # Lets Prometheus scrape the operator when you run it on your laptop with `make run`.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - mimir
+
+  grafana:
+    image: grafana/grafana:13.3.0
+    container_name: kardigan-grafana
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_LOG_LEVEL=warn
+    volumes:
+      - ./grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+    ports:
+      - "127.0.0.1:9000:3000"
+    depends_on:
+      - mimir
+
+  # team-a: comfortably within budget. 10 metrics x 50 series = 500 series.
+  avalanche-team-a:
+    image: quay.io/prometheuscommunity/avalanche:v0.7.0
+    container_name: kardigan-avalanche-team-a
+    command:
+      - --gauge-metric-count=10
+      - --series-count=50
+      - --label-count=4
+      - --series-interval=0
+      - --metric-interval=0
+      - --value-interval=15
+      - --const-label=team=team-a
+      - --port=9001
+
+  # team-b: close to its budget. 20 metrics x 100 series = 2,000 series.
+  avalanche-team-b:
+    image: quay.io/prometheuscommunity/avalanche:v0.7.0
+    container_name: kardigan-avalanche-team-b
+    command:
+      - --gauge-metric-count=20
+      - --series-count=100
+      - --label-count=6
+      - --series-interval=0
+      - --metric-interval=0
+      - --value-interval=15
+      - --const-label=team=team-b
+      - --port=9001
+
+  # team-c: the noisy one. 40 gauges x 150 series = 6,000, plus 5 classic
+  # histograms x 150 series x 13 (10 buckets + +Inf + _sum + _count) = 9,750.
+  # Roughly 15,750 in total. The histograms feed the "trim histogram" rule in reports.
+  avalanche-team-c:
+    image: quay.io/prometheuscommunity/avalanche:v0.7.0
+    container_name: kardigan-avalanche-team-c
+    command:
+      - --gauge-metric-count=40
+      - --series-count=150
+      - --histogram-metric-count=5
+      - --histogram-metric-bucket-count=10
+      - --label-count=10
+      - --series-interval=0
+      - --metric-interval=0
+      - --value-interval=15
+      - --const-label=team=team-c
+      - --port=9001
+
+  # team-d: exercises the label and histogram advice in CardinalityReport.
+  # 20 buckets is over the threshold for TrimHistogram, and prometheus.yaml adds a
+  # redundant label for DropLabel. 4 x 20 + 2 x 20 x 23 = 1,000 series.
+  avalanche-team-d:
+    image: quay.io/prometheuscommunity/avalanche:v0.7.0
+    container_name: kardigan-avalanche-team-d
+    command:
+      - --gauge-metric-count=4
+      - --series-count=20
+      - --histogram-metric-count=2
+      - --histogram-metric-bucket-count=20
+      - --label-count=3
+      - --series-interval=0
+      - --metric-interval=0
+      - --value-interval=15
+      - --const-label=team=team-d
+      - --port=9001
+
+volumes:
+  mimir-data:

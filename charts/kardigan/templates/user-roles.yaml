@@ -1,0 +1,34 @@
+{{- /* Not used by the operator. Bind these to the people who manage budgets. */ -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "kardigan.fullname" . }}-budget-editor
+  labels:
+    {{- include "kardigan.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [kardigan.paulgreco.ca]
+    resources: [cardinalitybudgets]
+    verbs: [create, delete, get, list, patch, update, watch]
+  - apiGroups: [kardigan.paulgreco.ca]
+    resources: [cardinalitybudgets/status]
+    verbs: [get]
+  - apiGroups: [kardigan.paulgreco.ca]
+    resources: [cardinalityreports, cardinalityreports/status]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "kardigan.fullname" . }}-budget-viewer
+  labels:
+    {{- include "kardigan.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [kardigan.paulgreco.ca]
+    resources: [cardinalitybudgets]
+    verbs: [get, list, watch]
+  - apiGroups: [kardigan.paulgreco.ca]
+    resources: [cardinalitybudgets/status]
+    verbs: [get]
+  - apiGroups: [kardigan.paulgreco.ca]
+    resources: [cardinalityreports, cardinalityreports/status]
+    verbs: [get, list, watch]

@@ -1,0 +1,88 @@
+# Mimir's HTTP API. url is required.
+mimir:
+  # -- Base URL, without /prometheus. For example http://mimir-gateway.mimir.svc:8080
+  url: ""
+  # -- Tenant sent as X-Scope-OrgID. Leave empty when Mimir multitenancy is off.
+  tenant: ""
+  # -- Timeout for each request to Mimir.
+  timeout: 10s
+
+# Grafana, whose dashboards show which metrics are used. Without it, only rules
+# are checked, and recommendations have low confidence.
+grafana:
+  # -- Base URL. For example http://grafana.monitoring.svc
+  url: ""
+  # -- A Secret holding a read-only service account token that can see every
+  # dashboard. A dashboard it can't see looks unused.
+  tokenSecret:
+    name: ""
+    key: token
+  # -- Timeout for each request to Grafana.
+  timeout: 30s
+
+# -- How often to regenerate each CardinalityReport.
+reportInterval: 1h
+
+# -- Namespaces whose budgets may target any namespace, such as a central SRE
+# namespace. Budgets elsewhere may only target their own namespace.
+budgetAdminNamespaces: []
+
+metrics:
+  # -- Serve the kardigan_* metrics and create a Service for them.
+  enabled: true
+  # -- Serve over HTTPS with token authentication. Scrapers need a token whose
+  # service account is bound to the chart's metrics-reader ClusterRole. When
+  # false, anyone who can reach the port can read the metrics.
+  secure: true
+  port: 8443
+
+networkPolicy:
+  # -- Allow ingress to the pod only on the metrics port, from metricsFrom. Your
+  # cluster's network plugin has to enforce NetworkPolicy for this to have an effect.
+  enabled: false
+  # -- NetworkPolicy peers allowed to scrape metrics, such as a namespaceSelector for
+  # your Prometheus. Empty blocks all scrapes.
+  metricsFrom: []
+
+crds:
+  # -- Install and upgrade the CRD with the chart. It's kept on uninstall, so
+  # budgets survive. Set to false to manage the CRD separately.
+  install: true
+
+image:
+  repository: ghcr.io/pwgreco/kardigan
+  # -- Defaults to the chart's appVersion.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+serviceAccount:
+  # -- Create a service account. If false, name must refer to an existing one.
+  create: true
+  # -- Defaults to the release's full name.
+  name: ""
+  annotations: {}
+
+# -- Only the leader acts; more replicas give faster failover.
+replicaCount: 1
+
+# -- Extra command-line flags for the operator.
+extraArgs: []
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 128Mi
+  requests:
+    cpu: 10m
+    memory: 64Mi
+
+podAnnotations: {}
+podLabels: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+nameOverride: ""
+fullnameOverride: ""

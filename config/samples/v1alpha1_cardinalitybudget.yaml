@@ -1,0 +1,31 @@
+apiVersion: kardigan.paulgreco.ca/v1alpha1
+kind: CardinalityBudget
+metadata:
+  name: team-a
+spec:
+  target: { label: job, value: avalanche-team-a }
+  maxSeries: 1000        # ~500 used: WithinBudget
+---
+apiVersion: kardigan.paulgreco.ca/v1alpha1
+kind: CardinalityBudget
+metadata:
+  name: team-b
+spec:
+  target: { label: job, value: avalanche-team-b }
+  maxSeries: 2200        # ~2,000 used: WarningThreshold
+---
+apiVersion: kardigan.paulgreco.ca/v1alpha1
+kind: CardinalityBudget
+metadata:
+  name: team-c
+spec:
+  target: { label: job, value: avalanche-team-c }
+  maxSeries: 10000       # ~15,750 used: BudgetExceeded
+---
+apiVersion: kardigan.paulgreco.ca/v1alpha1
+kind: CardinalityBudget
+metadata:
+  name: team-d
+spec:
+  target: { label: job, value: avalanche-team-d }
+  maxSeries: 2000        # ~1,000 used: WithinBudget, with label and histogram advice in its report

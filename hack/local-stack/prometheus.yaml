@@ -1,0 +1,40 @@
+global:
+  scrape_interval: 15s
+  external_labels:
+    cluster: local-stack
+
+scrape_configs:
+  # Each Avalanche instance is one "team". The job name is what
+  # CardinalityBudgets target with `label: job` until they run in a cluster.
+  - job_name: avalanche-team-a
+    static_configs:
+      - targets: ["avalanche-team-a:9001"]
+
+  - job_name: avalanche-team-b
+    static_configs:
+      - targets: ["avalanche-team-b:9001"]
+
+  - job_name: avalanche-team-c
+    static_configs:
+      - targets: ["avalanche-team-c:9001"]
+
+  # pod_uid is a copy of series_id, so series stay distinct without either one, but
+  # not without both. Avalanche can't produce a redundant label by itself.
+  - job_name: avalanche-team-d
+    static_configs:
+      - targets: ["avalanche-team-d:9001"]
+    metric_relabel_configs:
+      - source_labels: [series_id]
+        target_label: pod_uid
+
+  # The operator's own metrics while it runs on your laptop with:
+  #   go run ./cmd/main.go --metrics-bind-address=:8080 --metrics-secure=false ...
+  # This target shows as DOWN until the operator runs locally. That is expected.
+  - job_name: kardigan
+    static_configs:
+      - targets: ["host.docker.internal:8080"]
+
+remote_write:
+  - url: http://mimir:8080/api/v1/push
+    headers:
+      X-Scope-OrgID: demo

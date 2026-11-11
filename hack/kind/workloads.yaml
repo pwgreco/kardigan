@@ -1,0 +1,100 @@
+# Three "team" namespaces in kind, each running Avalanche.
+# The Prometheus agent (prometheus-agent.yaml) scrapes pods annotated with
+# prometheus.io/scrape and keeps the namespace label, so CardinalityBudgets
+# can switch from `label: job` to `label: namespace`.
+#
+#   kubectl apply -f hack/kind/workloads.yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: team-a
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: team-b
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: team-c
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: avalanche
+  namespace: team-a
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: avalanche }
+  template:
+    metadata:
+      labels: { app: avalanche }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9001"
+    spec:
+      containers:
+        - name: avalanche
+          image: quay.io/prometheuscommunity/avalanche:v0.7.0
+          args: ["--gauge-metric-count=10", "--series-count=50", "--label-count=4",
+                 "--series-interval=0", "--metric-interval=0", "--value-interval=15", "--port=9001"]
+          ports: [{ containerPort: 9001, name: metrics }]
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { memory: 128Mi }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: avalanche
+  namespace: team-b
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: avalanche }
+  template:
+    metadata:
+      labels: { app: avalanche }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9001"
+    spec:
+      containers:
+        - name: avalanche
+          image: quay.io/prometheuscommunity/avalanche:v0.7.0
+          args: ["--gauge-metric-count=20", "--series-count=100", "--label-count=6",
+                 "--series-interval=0", "--metric-interval=0", "--value-interval=15", "--port=9001"]
+          ports: [{ containerPort: 9001, name: metrics }]
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { memory: 128Mi }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: avalanche
+  namespace: team-c
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: avalanche }
+  template:
+    metadata:
+      labels: { app: avalanche }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9001"
+    spec:
+      containers:
+        - name: avalanche
+          image: quay.io/prometheuscommunity/avalanche:v0.7.0
+          args: ["--gauge-metric-count=40", "--series-count=150", "--histogram-metric-count=5",
+                 "--histogram-metric-bucket-count=10", "--label-count=10",
+                 "--series-interval=0", "--metric-interval=0", "--value-interval=15", "--port=9001"]
+          ports: [{ containerPort: 9001, name: metrics }]
+          resources:
+            requests: { cpu: 20m, memory: 64Mi }
+            limits: { memory: 256Mi }

@@ -1,0 +1,112 @@
+# Tests a report's snippet through a real Prometheus Operator. Needs the
+# Operator's bundle installed, e.g. kubectl create -f
+# https://github.com/prometheus-operator/prometheus-operator/releases/download/v0.94.2/bundle.yaml
+#
+# The same series as team-d in hack/local-stack: pod_uid is a copy of series_id, and
+# 20 buckets is over the threshold for TrimHistogram.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: team-op
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: avalanche
+  namespace: team-op
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: avalanche }
+  template:
+    metadata:
+      labels: { app: avalanche }
+    spec:
+      containers:
+        - name: avalanche
+          image: quay.io/prometheuscommunity/avalanche:v0.7.0
+          args: ["--gauge-metric-count=4", "--series-count=20", "--histogram-metric-count=2",
+                 "--histogram-metric-bucket-count=20", "--label-count=3", "--series-interval=0",
+                 "--metric-interval=0", "--value-interval=15", "--port=9001"]
+          ports: [{ containerPort: 9001, name: metrics }]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: avalanche
+  namespace: team-op
+  labels: { app: avalanche }
+spec:
+  selector: { app: avalanche }
+  ports: [{ name: metrics, port: 9001 }]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: team-op
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: prometheus
+  namespace: team-op
+rules:
+  - apiGroups: [""]
+    resources: [services, endpoints, pods]
+    verbs: [get, list, watch]
+  - apiGroups: [discovery.k8s.io]
+    resources: [endpointslices]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: prometheus
+  namespace: team-op
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: prometheus
+subjects:
+  - kind: ServiceAccount
+    name: prometheus
+    namespace: team-op
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: team-op
+  namespace: team-op
+spec:
+  replicas: 1
+  serviceAccountName: prometheus
+  scrapeInterval: 15s
+  serviceMonitorSelector: {}
+  remoteWrite:
+    - url: http://kardigan-mimir:8080/api/v1/push
+      headers:
+        X-Scope-OrgID: demo
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: avalanche
+  namespace: team-op
+spec:
+  selector:
+    matchLabels: { app: avalanche }
+  endpoints:
+    - port: metrics
+      metricRelabelings:
+        - sourceLabels: [series_id]
+          targetLabel: pod_uid
+---
+apiVersion: kardigan.paulgreco.ca/v1alpha1
+kind: CardinalityBudget
+metadata:
+  name: team-op
+  namespace: team-op
+spec:
+  target: { label: namespace, value: team-op }
+  maxSeries: 2000

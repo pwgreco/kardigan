@@ -1,0 +1,44 @@
+# Single-process Mimir for local development. Do not use in production.
+# Based on Grafana's "Play with Mimir" tutorial config, reduced to one
+# instance with local filesystem storage (no MinIO, no memberlist peers).
+target: all
+
+# Multitenancy stays on so the operator exercises the X-Scope-OrgID header,
+# as it would against a real Mimir. Prometheus writes as tenant "demo".
+multitenancy_enabled: true
+
+common:
+  storage:
+    backend: filesystem
+    filesystem:
+      dir: /data/storage
+
+blocks_storage:
+  storage_prefix: blocks
+  tsdb:
+    dir: /data/ingester
+
+# One instance means a replication factor of 1 (the default is 3).
+ingester:
+  ring:
+    replication_factor: 1
+
+store_gateway:
+  sharding_ring:
+    replication_factor: 1
+
+compactor:
+  data_dir: /data/compactor
+
+ruler:
+  rule_path: /data/ruler
+
+limits:
+  # Required for /prometheus/api/v1/cardinality/* (Kardigan's data source).
+  cardinality_analysis_enabled: true
+  # Headroom for Avalanche. Defaults are 10,000 samples/s and 150,000 series.
+  ingestion_rate: 50000
+  max_global_series_per_user: 500000
+
+server:
+  log_level: warn

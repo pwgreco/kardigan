@@ -1,0 +1,11 @@
+apiVersion: v2
+name: kardigan
+description: Cardinality budgets for Prometheus and Grafana Mimir, as a Kubernetes operator.
+type: application
+home: https://github.com/pwgreco/kardigan
+sources:
+  - https://github.com/pwgreco/kardigan
+# Placeholders. The release workflow packages the chart with the released
+# version, and with appVersion set to the image tag.
+version: 0.0.0
+appVersion: v0.0.0

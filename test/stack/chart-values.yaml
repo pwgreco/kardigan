@@ -1,0 +1,16 @@
+# The operator as test/stack installs it from the chart, for make test-extended.
+image:
+  repository: kardigan
+  tag: stack-test
+  pullPolicy: Never
+mimir:
+  url: http://kardigan-mimir:8080
+  tenant: demo
+grafana:
+  url: http://kardigan-grafana:3000
+networkPolicy:
+  enabled: true
+  metricsFrom:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: metrics-allowed

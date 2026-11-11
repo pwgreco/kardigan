@@ -1,0 +1,55 @@
+{
+  "uid": "kardigan-team-c-demo",
+  "title": "Kardigan team-c demo",
+  "description": "Gives CardinalityReport something to find: team-c's metrics that appear here show as Keep, and the rest as drop candidates.",
+  "schemaVersion": 39,
+  "templating": {
+    "list": [
+      {
+        "name": "job",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "mimir" },
+        "query": { "query": "label_values(avalanche_gauge_metric_mmmmm_0_1, job)", "refId": "A" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Histogram p90",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "mimir" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "mimir" },
+          "expr": "histogram_quantile(0.9, sum by (le) (rate(avalanche_histogram_metric_mmmmm_0_0_bucket{job=\"$job\"}[$__rate_interval])))"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "row",
+      "title": "Collapsed row",
+      "collapsed": true,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 8 },
+      "panels": [
+        {
+          "id": 3,
+          "title": "Gauge",
+          "type": "timeseries",
+          "datasource": { "type": "prometheus", "uid": "mimir" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "type": "prometheus", "uid": "mimir" },
+              "expr": "sum(avalanche_gauge_metric_mmmmm_0_0{job=\"$job\"})"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

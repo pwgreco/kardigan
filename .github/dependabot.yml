@@ -1,0 +1,40 @@
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      kubernetes:
+        patterns: ["k8s.io/*", "sigs.k8s.io/*"]
+      opentelemetry:
+        patterns: ["go.opentelemetry.io/*"]
+      golang-x:
+        patterns: ["golang.org/x/*"]
+    commit-message:
+      # fix, not chore: release-please only cuts a release for fixes and
+      # features, and an update that ships nothing patches nothing.
+      prefix: fix
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      # fix, not chore: release-please only cuts a release for fixes and
+      # features, and an update that ships nothing patches nothing.
+      prefix: fix
+
+  - package-ecosystem: docker-compose
+    directory: /hack/local-stack
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore

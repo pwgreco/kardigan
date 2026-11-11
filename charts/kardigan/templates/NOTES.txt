@@ -1,0 +1,22 @@
+Kardigan is running in namespace {{ .Release.Namespace }} and querying {{ .Values.mimir.url }}.
+
+Create a budget, then check it:
+
+  kubectl apply -f - <<YAML
+  apiVersion: kardigan.paulgreco.ca/v1alpha1
+  kind: CardinalityBudget
+  metadata: { name: my-team, namespace: my-team }
+  spec:
+    target: { label: namespace, value: my-team }
+    maxSeries: 10000
+  YAML
+
+  kubectl get cb -A
+
+Kardigan writes a CardinalityReport for each budget, recommending what to drop:
+
+  kubectl get crpt -A
+{{- if not .Values.grafana.url }}
+
+grafana.url isn't set, so reports only check rules, and their recommendations have low confidence.
+{{- end }}

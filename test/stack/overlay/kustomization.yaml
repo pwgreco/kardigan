@@ -1,0 +1,13 @@
+# The operator as test/stack runs it: pointed at the local stack, with an admin
+# namespace to test cross-namespace budgets.
+resources:
+- ../../../config/kind
+
+patches:
+- target:
+    kind: Deployment
+    name: controller-manager
+  patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/args/-
+      value: --budget-admin-namespaces=sre
