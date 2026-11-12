@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/pwgreco/kardigan/compare/v0.2.0...v0.3.0) (2026-11-12)
+
+
+### Features
+
+* first public release of Kardigan ([8318426](https://github.com/pwgreco/kardigan/commit/8318426d843ef932530b353f686897046dba5b03))
+
 ## 0.2.0 (2026-11-03)
 
 
