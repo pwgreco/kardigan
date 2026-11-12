@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   test-e2e:
-    name: Run on Ubuntu
+    name: E2E Tests
     permissions:
       contents: read
     runs-on: ubuntu-latest

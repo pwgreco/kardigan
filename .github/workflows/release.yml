@@ -74,9 +74,11 @@ jobs:
         id: names
         run: |
           echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
-          echo "IMG=ghcr.io/${GITHUB_REPOSITORY,,}:${TAG}" >> "$GITHUB_ENV"
-          echo "CHART_REGISTRY=oci://ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/charts" >> "$GITHUB_ENV"
-          echo "CHART_VERSION=${TAG#v}" >> "$GITHUB_ENV"
+          {
+            echo "IMG=ghcr.io/${GITHUB_REPOSITORY,,}:${TAG}"
+            echo "CHART_REGISTRY=oci://ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/charts"
+            echo "CHART_VERSION=${TAG#v}"
+          } >> "$GITHUB_ENV"
       # These download build tools, so they run before the registry login.
       - name: Build install.yaml
         run: make build-installer IMG="$IMG"
